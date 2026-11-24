@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -76,7 +75,7 @@ let statuses=[["Pending","#F59E0B","Received, waiting for review"],["Under Revie
 let reps=[];
 let notifs=[];
 let anns=[];
- let logs=[
+ =[
  [
    "CivicSnap system initialized",
    now()
@@ -315,7 +314,7 @@ function legends(){return `<div class="card"><h3>Status legends</h3><p class="mu
 function rn(i,n){const o=statuses[i].n;statuses[i].n=n||o;reps.forEach(r=>{if(r.st===o)r.st=statuses[i].n;r.hist.forEach(h=>{if(h[0]===o)h[0]=statuses[i].n})});log(`Renamed status ${o} → ${n}`);render()}
 function mv(i,d){const j=i+d;if(j<0||j>=statuses.length)return;[statuses[i],statuses[j]]=[statuses[j],statuses[i]];render()}
 function usersTab(){return `<div class="card tw"><table><thead><tr><th>Name</th><th>ID</th><th>Email</th><th>Role</th></tr></thead><tbody>${users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.id)}</td><td>${esc(u.email)}</td><td>${esc(u.role)}</td></tr>`).join("")}</tbody></table></div>`}
-let logs=[["Prototype started",now()]];function log(m){logs.unshift([`${S.user?.name}: ${m}`,now()])}
+=[["Prototype started",now()]];function log(m){logs.unshift([`${S.user?.name}: ${m}`,now()])}
 function activity(){return `<div class="card"><h3>Activity log</h3>${logs.map(l=>`<div style="padding:6px 0;border-bottom:1px solid var(--bd)">${esc(l[0])} <span class="mut">${l[1]}</span></div>`).join("")}</div>`}
 function nots(){const L=notifs.filter(n=>n.uid===S.user.id);notifs.forEach(n=>{if(n.uid===S.user.id)n.read=true});
 return `<div class="card"><h3>Notifications</h3>${L.map(n=>`<div style="padding:8px 0;border-bottom:1px solid var(--bd)">${esc(n.m)} <span class="mut">${n.t}</span></div>`).join("")||`<p class="mut">You’re all caught up.</p>`}</div>`}
