@@ -64,25 +64,43 @@ const KEY="CIVICSNAP-ADMIN-2027";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const now=()=>new Date().toLocaleString("en-PH",{dateStyle:"medium",timeStyle:"short"});
 let users=[
- {name:"System Administrator",id:"EMP-0001",email:"admin@civicsnap-ibis.edu.ph",pw:"CivicSnap@IBIS2027!",role:"Administrator"},
- {name:"Ana Reyes",id:"2027-0142",email:"student@ibis.edu",pw:"student123",role:"Student"},
- {name:"Mr. Dela Cruz",id:"EMP-0231",email:"teacher@ibis.edu",pw:"teacher123",role:"Teacher"},
- {name:"Mang Ben",id:"EMP-0310",email:"maint@ibis.edu",pw:"maint123",role:"Maintenance Personnel"}];
+ {
+   name:"System Administrator",
+   id:"EMP-0001",
+   email:"admin@civicsnap-ibis.edu.ph",
+   pw:"CivicSnap@IBIS2027!",
+   role:"Administrator"
+ }
+];
 let statuses=[["Pending","#F59E0B","Received, waiting for review"],["Under Review","#F97316","Being checked by an administrator"],["In Progress","#2563EB","Repair is underway"],["For Verification","#8B5CF6","Waiting for the reporter or admin to confirm"],["Resolved","#10B981","Fixed and confirmed"],["Rejected","#EF4444","Not accepted as a facility concern"]].map(([n,c,d])=>({n,c,d,on:true}));
-let reps=[
- {rid:"CS-2027-0001",title:"Broken armchair in Grade 8-Rizal",cat:"Furniture Damage",desc:"Two armchairs have loose legs.",loc:"Grade 8-Rizal",pr:"Medium",st:"In Progress",uid:"2027-0142",as:"EMP-0310",imgs:[],hist:[["Pending","Oct 3, 2026"],["Under Review","Oct 4, 2026"],["In Progress","Oct 8, 2026"]],notes:["Awaiting replacement screws."],date:"Oct 3, 2026"},
- {rid:"CS-2027-0002",title:"Flickering lights in Room 12",cat:"Electrical Issues",desc:"Ceiling lights flicker all day.",loc:"Room 12",pr:"High",st:"Pending",uid:"EMP-0231",as:"",imgs:[],hist:[["Pending","Nov 10, 2026"]],notes:[],date:"Nov 10, 2026"},
- {rid:"CS-2027-0003",title:"Leaking faucet at boys’ restroom",cat:"Plumbing Problems",desc:"Constant dripping, floor is wet.",loc:"Restroom, Building A",pr:"High",st:"Resolved",uid:"2027-0142",as:"EMP-0310",imgs:[],hist:[["Pending","Sep 12, 2026"],["In Progress","Sep 14, 2026"],["Resolved","Sep 16, 2026"]],notes:["Washer replaced."],date:"Sep 12, 2026"},
- {rid:"CS-2027-0004",title:"Exposed wiring near the canteen",cat:"Safety Hazards",desc:"Wires hanging from the wall.",loc:"Canteen",pr:"Critical",st:"Under Review",uid:"EMP-0231",as:"",imgs:[],hist:[["Pending","Nov 20, 2026"],["Under Review","Nov 21, 2026"]],notes:[],date:"Nov 20, 2026"},
- {rid:"CS-2027-0005",title:"Overflowing trash bins at the quadrangle",cat:"Sanitation Concerns",desc:"Bins not collected for days.",loc:"Quadrangle",pr:"Low",st:"Resolved",uid:"2027-0142",as:"",imgs:[],hist:[["Pending","Aug 5, 2026"],["Resolved","Aug 7, 2026"]],notes:[],date:"Aug 5, 2026"}];
-let notifs=[{uid:"2027-0142",m:"CS-2027-0001 is now In Progress.",t:"Oct 8, 2026",read:false}];
+let reps=[];
+let notifs=[];
+let anns=[];
+ let logs=[
+ [
+   "CivicSnap system initialized",
+   now()
+ ]
+];
 let S={view:"home",user:null,tab:"",mode:"login",pending:null,err:"",f:{q:"",st:"",cat:"",pr:""},open:null,draft:[],toast:""};
 const isAdm=()=>S.user?.role==="Administrator",isMt=()=>S.user?.role==="Maintenance Personnel";
 const stOf=n=>statuses.find(s=>s.n===n)||{c:"#64748B"};
 const badge=n=>`<span class="badge" style="background:${stOf(n).c}">${esc(n)}</span>`;
 const nameOf=id=>users.find(u=>u.id===id)?.name||"—";
 const visible=r=>isAdm()||(isMt()?r.as===S.user.id:r.uid===S.user.id);
-const notify=(uid,m)=>notifs.unshift({uid,m,t:now(),read:false});
+const notify=(uid,m)=>...
+ function notifyAdmins(message){
+ users
+   .filter(u=>u.role==="Administrator")
+   .forEach(u=>{
+     notifs.unshift({
+       uid:u.id,
+       m:message,
+       t:now(),
+       read:false
+     });
+   });
+}
 const toast=m=>{S.toast=m;render();setTimeout(()=>{S.toast="";render()},2200)};
 function go(v){S.view=v;S.err="";if(v==="app"){S.tab=isAdm()?"Overview":isMt()?"Assigned":"My reports"}render();scrollTo(0,0)}
 function theme(){const r=document.documentElement;const d=r.dataset.theme==="dark"||(!r.dataset.theme&&matchMedia("(prefers-color-scheme:dark)").matches);r.dataset.theme=d?"light":"dark"}
@@ -132,9 +150,52 @@ if(S.tab==="Overview")b=overview();else if(S.tab==="All concerns"||S.tab==="Assi
 else if(S.tab==="New concern")b=form();else if(S.tab==="Legends")b=legends();else if(S.tab==="Users")b=usersTab();else if(S.tab==="Announcements")b=annTab();else if(S.tab==="Reports")b=repTab();else if(S.tab==="Settings")b=setTab();else if(S.tab==="Notifications")b=nots();else b=activity();
 return `<div class="wrap">${!isAdm()&&anns[0]?`<div class="note"><b>${esc(anns[0].t)}</b> ${esc(anns[0].b)}</div>`:""}<div class="tabs">${tabs.map(t=>`<button class="${S.tab===t?"on":""}" onclick="S.tab='${t}';render()">${t}${t==="Notifications"&&un?` (${un})`:""}</button>`).join("")}</div>${b}</div>`}
 
-function overview(){const R=reps,tot=R.length,res=R.filter(r=>r.st==="Resolved").length;
-const k=[["Total reports",tot],["Pending",R.filter(r=>r.st==="Pending").length],["In progress",R.filter(r=>r.st==="In Progress").length],["Resolved",res],["Critical",R.filter(r=>r.pr==="Critical").length],["Resolution rate",tot?Math.round(res/tot*100)+"%":"0%"],["Avg resolution time",(()=>{const d=R.filter(r=>r.st==="Resolved").map(r=>{const h=r.hist.find(h=>h[0]==="Resolved");return h?(Date.parse(h[1])-Date.parse(r.date))/864e5:null}).filter(x=>x!==null&&!isNaN(x));return d.length?(d.reduce((a,b)=>a+b,0)/d.length).toFixed(1)+" days":"—"})()]];
-const bars=(items,col)=>items.map(([n,c,cl])=>`<div style="margin:8px 0"><div style="display:flex;justify-content:space-between"><span>${esc(n)}</span><b>${c}</b></div><div class="bar"><i style="width:${tot?c/tot*100:0}%;background:${cl||col}"></i></div></div>`).join("");
+function overview(){
+
+if(reps.length===0){
+
+ return `
+ <div class="card">
+
+   <h2>Welcome to CivicSnap</h2>
+
+   <p>
+   There are currently no submitted concerns.
+   Reports will appear once users begin
+   submitting concerns.
+   </p>
+
+   <div class="grid">
+
+     <div class="card kpi">
+       <span class="mut">Total Reports</span>
+       <b>0</b>
+     </div>
+
+     <div class="card kpi">
+       <span class="mut">Pending</span>
+       <b>0</b>
+     </div>
+
+     <div class="card kpi">
+       <span class="mut">In Progress</span>
+       <b>0</b>
+     </div>
+
+     <div class="card kpi">
+       <span class="mut">Resolved</span>
+       <b>0</b>
+     </div>
+
+   </div>
+
+ </div>
+ `;
+}
+
+const R=reps,
+tot=R.length,
+res=R.filter(r=>r.st==="Resolved").length;
 const locs={};R.forEach(r=>locs[r.loc]=(locs[r.loc]||0)+1);const mx=Math.max(1,...Object.values(locs));
 const mon={};R.forEach(r=>{const m=r.date.slice(0,3);mon[m]=(mon[m]||0)+1});
 return `<div class="grid">${k.map(([l,n])=>`<div class="card kpi"><span class="mut">${l}</span><b>${n}</b></div>`).join("")}</div>
@@ -159,12 +220,63 @@ function form(){return `<div class="card" style="max-width:640px"><h2>Report a c
 <label for="im">Photos (one or more)</label><input id="im" type="file" accept="image/*" ${cfg.multi?"multiple":""} onchange="prev(this)"><div class="thumbs" id="pv">${S.draft.map(u=>`<img src="${u}" alt="Preview">`).join("")}</div>
 <button class="btn s" style="margin-top:14px" onclick="submit()">Submit concern</button>${S.err?`<div class="err">${S.err}</div>`:""}</div>`}
 function prev(i){S.draft=[...i.files].map(f=>URL.createObjectURL(f));document.getElementById("pv").innerHTML=S.draft.map(u=>`<img src="${u}" alt="Preview">`).join("")}
-function submit(){if(!v("t")||!v("d")||!v("l")){S.err="Add a title, details, and a location.";return render()}
- const rid="CS-2027-"+String(reps.length+1).padStart(4,"0"),d=new Date().toLocaleDateString("en-PH",{dateStyle:"medium"});
- reps.unshift({rid,title:v("t"),cat:v("c"),desc:v("d"),loc:v("l"),pr:v("p"),st:statuses.find(s=>s.on).n,uid:S.user.id,as:"",imgs:S.draft,hist:[[statuses.find(s=>s.on).n,d]],notes:[],date:d,time:new Date().toLocaleTimeString("en-PH",{timeStyle:"short"})});
- notify(S.user.id,`${rid} was submitted. We’ll update you as it moves forward.`);users.filter(u=>u.role==="Administrator").forEach(u=>notify(u.id,`New ${v("p")} concern ${rid}: ${v("t")}`));
- log("Submitted "+rid);S.draft=[];S.err="";S.tab="My reports";toast("Submitted as "+rid)}
+function submit(){
 
+ if(!v("t")||!v("d")||!v("l")){
+   S.err="Add a title, details, and a location.";
+   return render();
+ }
+
+ const rid="CS-2027-"+String(reps.length+1).padStart(4,"0");
+
+ const d=new Date().toLocaleDateString(
+   "en-PH",
+   {dateStyle:"medium"}
+ );
+
+ reps.unshift({
+   rid,
+   title:v("t"),
+   cat:v("c"),
+   desc:v("d"),
+   loc:v("l"),
+   pr:v("p"),
+   st:"Pending",
+   uid:S.user.id,
+   as:"",
+   imgs:S.draft,
+   hist:[
+     [
+       "Pending",
+       d
+     ]
+   ],
+   notes:[],
+   date:d,
+   time:new Date().toLocaleTimeString(
+     "en-PH",
+     {timeStyle:"short"}
+   )
+ });
+
+ notify(
+   S.user.id,
+   `${rid} was submitted successfully.`
+ );
+
+ notifyAdmins(
+   `New concern submitted: ${rid} - ${v("t")}`
+ );
+
+ log(`Submitted ${rid}`);
+
+ S.draft=[];
+ S.err="";
+ S.tab="My reports";
+
+ toast(`Submitted as ${rid}`);
+ }
+ 
 function modal(){const r=reps.find(x=>x.rid===S.open);if(!r)return"";const staff=isAdm()||isMt();
 const maint=users.filter(u=>u.role==="Maintenance Personnel"),rep=users.find(u=>u.id===r.uid)||{};
 return `<div class="ov" onclick="if(event.target===this){S.open=null;render()}"><div class="mod" role="dialog" aria-modal="true"><div class="row"><h2 style="flex:1">${esc(r.title)}</h2><button class="btn g sm" onclick="S.open=null;render()">Close</button></div>
@@ -180,7 +292,22 @@ ${isMt()?`<button class="btn sm s" style="margin-top:8px" onclick="complete('${r
 function setSt(id){const s=document.getElementById("ns").value;return setTo(id,s)}
 function setStOld(id){const r=reps.find(x=>x.rid===id),s=document.getElementById("ns").value;if(s===r.st)return;r.st=s;r.hist.push([s,new Date().toLocaleDateString("en-PH",{dateStyle:"medium"})]);notify(r.uid,`${id} is now ${s}.`);log(`${id} → ${s}`);toast("Status updated")}
 function assign(id){const r=reps.find(x=>x.rid===id);r.as=document.getElementById("as").value;if(r.as){notify(r.as,`You were assigned ${id}.`);notify(r.uid,`${id} was assigned for repair.`)}log(`Assigned ${id}`);toast("Assignment saved")}
-function addNote(id){const n=v("nt");if(!n)return;reps.find(x=>x.rid===id).notes.push(n);log("Note on "+id);render()}
+function addNote(id){
+
+ const note=v("nt");
+
+ if(!note) return;
+
+ reps.find(x=>x.rid===id).notes.push(note);
+
+ notifyAdmins(
+   `A note was added to ${id}`
+ );
+
+ log(`Note added to ${id}`);
+
+ render();
+}
 function evid(id,i){reps.find(x=>x.rid===id).imgs.push(...[...i.files].map(f=>URL.createObjectURL(f)));toast("Evidence uploaded")}
 
 function legends(){return `<div class="card"><h3>Status legends</h3><p class="mut">Only administrators can change these. Order sets the workflow.</p>${statuses.map((s,i)=>`<div class="row" style="align-items:center;margin:10px 0"><input type="color" value="${s.c}" onchange="statuses[${i}].c=this.value;render()" style="width:46px;padding:2px" aria-label="Color"><input value="${esc(s.n)}" onchange="rn(${i},this.value)" style="width:170px" aria-label="Name"><input value="${esc(s.d)}" onchange="statuses[${i}].d=this.value" style="flex:1;min-width:180px" aria-label="Description"><button class="btn sm g" onclick="mv(${i},-1)" aria-label="Move up">↑</button><button class="btn sm g" onclick="mv(${i},1)" aria-label="Move down">↓</button><button class="btn sm ${s.on?"":"g"}" onclick="statuses[${i}].on=!statuses[${i}].on;render()">${s.on?"Enabled":"Disabled"}</button><button class="btn sm g" onclick="delSt(${i})">Delete</button></div>`).join("")}
@@ -200,7 +327,37 @@ function addAnn(){if(!v("at")||!v("ab"))return toast("Add a title and a message"
 function repTab(){const q=x=>'"'+String(x??"").replace(/"/g,'""')+'"';const csv=["Report ID,Reporter,Role,Title,Category,Location,Date,Priority,Status",...reps.map(r=>[r.rid,nameOf(r.uid),users.find(u=>u.id===r.uid)?.role,r.title,r.cat,r.loc,r.date,r.pr,r.st].map(q).join(","))].join("\n");
 return `<div class="card"><h3>Generate report</h3><div class="grid">${statuses.map(s=>`<div class="kpi">${badge(s.n)}<b>${reps.filter(r=>r.st===s.n).length}</b></div>`).join("")}</div><label for="csv">Spreadsheet-ready data (CSV)</label><textarea id="csv" rows="8" readonly onfocus="this.select()">${esc(csv)}</textarea><p class="mut">Select and copy this into Excel or Google Sheets. One-click PDF and Excel downloads need the backend.</p></div>`}
 function setTab(){return `<div class="card" style="max-width:560px"><h3>System settings</h3><label for="sn">School name</label><input id="sn" value="${esc(cfg.school)}" onchange="cfg.school=this.value;render()"><label><input type="checkbox" ${cfg.email?"checked":""} onchange="cfg.email=this.checked" style="width:auto"> Send email notifications</label><label><input type="checkbox" ${cfg.multi?"checked":""} onchange="cfg.multi=this.checked;render()" style="width:auto"> Allow multiple photos per report</label><p class="mut">Settings apply to this demo session only.</p></div>`}
-function setTo(id,s){const r=reps.find(x=>x.rid===id);if(!r||r.st===s)return;if(s==="Resolved"&&r.st==="For Verification")notify(r.uid,`Verification completed for ${id}.`);r.st=s;r.hist.push([s,new Date().toLocaleDateString("en-PH",{dateStyle:"medium"})]);notify(r.uid,`${id} is now ${s}.`);log(`${id} → ${s}`);toast("Status updated")}
+function setTo(id,s){
+
+ const r=reps.find(x=>x.rid===id);
+
+ if(!r || r.st===s) return;
+
+ r.st=s;
+
+ r.hist.push([
+   s,
+   new Date().toLocaleDateString(
+     "en-PH",
+     {dateStyle:"medium"}
+   )
+ ]);
+
+ notify(
+   r.uid,
+   `${id} is now ${s}.`
+ );
+
+ notifyAdmins(
+   `${id} status changed to ${s}`
+ );
+
+ log(`${id} → ${s}`);
+
+ toast("Status updated");
+
+ render();
+}
 function quickRes(id){setTo(id,"Resolved")}
 function complete(id){setTo(id,statuses.find(s=>s.n==="For Verification"&&s.on)?"For Verification":"Resolved")}
 function delSt(i){const n=statuses[i].n;if(reps.some(r=>r.st===n))return toast("Move reports out of “"+n+"” before deleting it");if(confirm("Delete status "+n+"?")){statuses.splice(i,1);log("Deleted status "+n);render()}}
@@ -211,65 +368,5 @@ function render(){const a=document.activeElement?.id;
 render();
 </script>
 </body>
-# CivicSnap (frontend + backend, combined)
-
-```
-civicsnap/
-├── backend/    Express + PostgreSQL + Socket.IO API
-├── frontend/   React + Vite + Tailwind website
-└── package.json  root scripts that run both together
-```
-
-## What changed when the two projects were combined
-- Added `GET /api/admin/stats` and `GET /api/admin/activity` to the backend
-  (`backend/src/routes/admin.js`). The admin dashboard already called them, but they did not exist.
-- The backend now serves the built frontend, so production is **one server, one URL**
-  (no CORS setup, no second host).
-- The frontend uses the same origin for the API in a production build, and `localhost:4000` in dev.
-- Helmet's `upgrade-insecure-requests` is turned off so the site works over plain `http://localhost`.
-
-## First-time setup
-1. Install PostgreSQL and create an empty database named `civicsnap`.
-2. `npm run install:all`
-3. `cp backend/.env.example backend/.env` and fill in:
-   `DATABASE_URL`, `JWT_SECRET`, `ADMIN_PASSWORD`, `ADMIN_VERIFICATION_CODE`
-   (generate the secret with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`).
-4. `npm run setup`   (creates tables, the single admin account and the default status legends)
-
-## Run it
-
-**Development** (hot reload, two ports):
-```
-npm run dev
-```
-Open http://localhost:5173. Keep `CLIENT_URL=http://localhost:5173` in `backend/.env`.
-
-**As one website** (what you deploy):
-```
-npm run build
-npm start
-```
-Open http://localhost:4000. Set `CLIENT_URL` in `backend/.env` to the public address of the site
-(it is used in password-reset links).
-
-## Logging in
-- Students, teachers and maintenance staff register on the site.
-- The administrator is the account created by `npm run setup`. After the password, the site asks for
-  the administrator verification code you put in `.env`.
-
-## What the site does now
-- **Students / teachers / maintenance:** submit concerns with up to 4 photos, track status and progress,
-  cancel a report while it is still Pending, see announcements, get live notifications (bell in the top bar).
-- **Maintenance:** sees concerns assigned to them, moves them to *In Progress* / *For Verification*, adds internal notes.
-- **Administrator:** analytics and charts, all concerns (search, filters, archive, soft-delete/restore, assign, change
-  status), Legend Manager (add / recolour / reorder / disable statuses), user management (activate, deactivate,
-  change role, unlock), announcements, reports (date range, CSV download, print to PDF), searchable activity log,
-  system settings (categories, open/close registration, change admin password and verification code).
-
-## Notes
-- Photos are resized in the browser and stored on the server in `backend/uploads/` (no Cloudinary needed).
-  Back this folder up with the database, and mount it as a persistent disk if you host on a platform with an ephemeral filesystem.
-- Built-in statuses (Pending, Under Review, In Progress, For Verification, Resolved, Rejected) cannot be renamed or deleted.
-- No new npm packages were added; `npm run install:all` is enough.
 
 </html>
