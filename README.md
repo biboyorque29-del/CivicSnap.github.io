@@ -63,19 +63,16 @@ const KEY="CIVICSNAP-ADMIN-2027";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const now=()=>new Date().toLocaleString("en-PH",{dateStyle:"medium",timeStyle:"short"});
 let users=[
- {
-   name:"System Administrator",
-   id:"EMP-0001",
-   email:"admin@civicsnap-ibis.edu.ph",
-   pw:"CivicSnap@IBIS2027!",
-   role:"Administrator"
- }
+ {name:"System Administrator",id:"EMP-0001",email:"admin@civicsnap-ibis.edu.ph",pw:"CivicSnap@IBIS2027!",role:"Administrator"},
+ {name:"Demo Student",id:"STU-0001",email:"student@ibis.edu",pw:"student123",role:"Student"},
+ {name:"Demo Teacher",id:"TCH-0001",email:"teacher@ibis.edu",pw:"teacher123",role:"Teacher"},
+ {name:"Demo Maintenance",id:"MNT-0001",email:"maint@ibis.edu",pw:"maint123",role:"Maintenance Personnel"}
 ];
 let statuses=[["Pending","#F59E0B","Received, waiting for review"],["Under Review","#F97316","Being checked by an administrator"],["In Progress","#2563EB","Repair is underway"],["For Verification","#8B5CF6","Waiting for the reporter or admin to confirm"],["Resolved","#10B981","Fixed and confirmed"],["Rejected","#EF4444","Not accepted as a facility concern"]].map(([n,c,d])=>({n,c,d,on:true}));
 let reps=[];
 let notifs=[];
 let anns=[];
- =[
+let logs=[
  [
    "CivicSnap system initialized",
    now()
@@ -95,7 +92,9 @@ const notify=(uid,m)=>{
     read:false
   });
 };
-}
+const notifyAdmins=m=>{
+  users.filter(u=>u.role==="Administrator").forEach(u=>notify(u.id,m));
+};
 const toast=m=>{S.toast=m;render();setTimeout(()=>{S.toast="";render()},2200)};
 function go(v){S.view=v;S.err="";if(v==="app"){S.tab=isAdm()?"Overview":isMt()?"Assigned":"My reports"}render();scrollTo(0,0)}
 function theme(){const r=document.documentElement;const d=r.dataset.theme==="dark"||(!r.dataset.theme&&matchMedia("(prefers-color-scheme:dark)").matches);r.dataset.theme=d?"light":"dark"}
@@ -141,6 +140,18 @@ if(S.tab==="Overview")b=overview();else if(S.tab==="All concerns"||S.tab==="Assi
 else if(S.tab==="New concern")b=form();else if(S.tab==="Legends")b=legends();else if(S.tab==="Users")b=usersTab();else if(S.tab==="Announcements")b=annTab();else if(S.tab==="Reports")b=repTab();else if(S.tab==="Settings")b=setTab();else if(S.tab==="Notifications")b=nots();else b=activity();
 return `<div class="wrap">${!isAdm()&&anns[0]?`<div class="note"><b>${esc(anns[0].t)}</b> ${esc(anns[0].b)}</div>`:""}<div class="tabs">${tabs.map(t=>`<button class="${S.tab===t?"on":""}" onclick="S.tab='${t}';render()">${t}${t==="Notifications"&&un?` (${un})`:""}</button>`).join("")}</div>${b}</div>`}
 function overview(){
+const bars=(items,col)=>
+items.map(([n,c,cl])=>`
+<div style="margin:8px 0">
+<div style="display:flex;justify-content:space-between">
+<span>${esc(n)}</span>
+<b>${c}</b>
+</div>
+<div class="bar">
+<i style="width:${tot?c/tot*100:0}%;background:${cl||col}"></i>
+</div>
+</div>
+`).join("");
 if(reps.length===0){
  return `
  <div class="card">
@@ -181,6 +192,13 @@ if(reps.length===0){
 const R=reps,
 tot=R.length,
 res=R.filter(r=>r.st==="Resolved").length;
+const k=[
+ ["Total Reports",tot],
+ ["Pending",R.filter(r=>r.st==="Pending").length],
+ ["In Progress",R.filter(r=>r.st==="In Progress").length],
+ ["Resolved",R.filter(r=>r.st==="Resolved").length],
+ ["Critical",R.filter(r=>r.pr==="Critical").length]
+];
 const locs={};R.forEach(r=>locs[r.loc]=(locs[r.loc]||0)+1);const mx=Math.max(1,...Object.values(locs));
 const mon={};R.forEach(r=>{const m=r.date.slice(0,3);mon[m]=(mon[m]||0)+1});
 return `<div class="grid">${k.map(([l,n])=>`<div class="card kpi"><span class="mut">${l}</span><b>${n}</b></div>`).join("")}</div>
@@ -208,7 +226,8 @@ function submit(){
    S.err="Add a title, details, and a location.";
    return render();
  }
- const rid="CS-2027-"+String(reps.length+1).padStart(4,"0");
+ const nextNo=reps.reduce((max,r)=>Math.max(max,Number(r.rid.split("-").pop())||0),0)+1;
+  const rid="CS-2027-"+String(nextNo).padStart(4,"0");
  
  const d=new Date().toLocaleDateString(
    "en-PH",
@@ -271,8 +290,7 @@ ${isMt()?`<button class="btn sm s" style="margin-top:8px" onclick="complete('${r
 <h3 style="margin-top:14px">Internal notes</h3>${r.notes.map(n=>`<div class="note">${esc(n)}</div>`).join("")||`<p class="mut">No notes yet.</p>`}
 <div class="row"><input id="nt" placeholder="Add a note or repair remark (staff only)" style="flex:1"><button class="btn sm" onclick="addNote('${r.rid}')">Add note</button></div>`:""}</div></div>`}
 function setSt(id){const s=document.getElementById("ns").value;return setTo(id,s)}
-function setStOld(id){const r=reps.find(x=>x.rid===id),s=document.getElementById("ns").value;if(s===r.st)return;r.st=s;r.hist.push([s,new Date().toLocaleDateString("en-PH",{dateStyle:"medium"})]);notify(r.uid,`${id} is now ${s}.`);log(`${id} → ${s}`);toast("Status updated")}
-function assign(id){const r=reps.find(x=>x.rid===id);r.as=document.getElementById("as").value;if(r.as){notify(r.as,`You were assigned ${id}.`);notify(r.uid,`${id} was assigned for repair.`)}log(`Assigned ${id}`);toast("Assignment saved")}
+function assign(id){const r=reps.find(x=>x.rid===id);if(!r)return;r.as=document.getElementById("as").value;if(r.as){notify(r.as,`You were assigned ${id}.`);notify(r.uid,`${id} was assigned for repair.`)}log(`Assigned ${id}`);toast("Assignment saved")}
 function addNote(id){
 
  const note=v("nt");
@@ -289,19 +307,17 @@ function addNote(id){
 
  render();
 }
-function evid(id,i){reps.find(x=>x.rid===id).imgs.push(...[...i.files].map(f=>URL.createObjectURL(f)));toast("Evidence uploaded")}
+function evid(id,i){const r=reps.find(x=>x.rid===id);if(!r)return;r.imgs.push(...[...i.files].map(f=>URL.createObjectURL(f)));toast("Evidence uploaded")}
 
 function legends(){return `<div class="card"><h3>Status legends</h3><p class="mut">Only administrators can change these. Order sets the workflow.</p>${statuses.map((s,i)=>`<div class="row" style="align-items:center;margin:10px 0"><input type="color" value="${s.c}" onchange="statuses[${i}].c=this.value;render()" style="width:46px;padding:2px" aria-label="Color"><input value="${esc(s.n)}" onchange="rn(${i},this.value)" style="width:170px" aria-label="Name"><input value="${esc(s.d)}" onchange="statuses[${i}].d=this.value" style="flex:1;min-width:180px" aria-label="Description"><button class="btn sm g" onclick="mv(${i},-1)" aria-label="Move up">↑</button><button class="btn sm g" onclick="mv(${i},1)" aria-label="Move down">↓</button><button class="btn sm ${s.on?"":"g"}" onclick="statuses[${i}].on=!statuses[${i}].on;render()">${s.on?"Enabled":"Disabled"}</button><button class="btn sm g" onclick="delSt(${i})">Delete</button></div>`).join("")}
 <button class="btn s" onclick="statuses.push({n:'New status',c:'#64748B',d:'Describe this status',on:true});render()">Add status</button></div>`}
 function rn(i,n){const o=statuses[i].n;statuses[i].n=n||o;reps.forEach(r=>{if(r.st===o)r.st=statuses[i].n;r.hist.forEach(h=>{if(h[0]===o)h[0]=statuses[i].n})});log(`Renamed status ${o} → ${n}`);render()}
 function mv(i,d){const j=i+d;if(j<0||j>=statuses.length)return;[statuses[i],statuses[j]]=[statuses[j],statuses[i]];render()}
 function usersTab(){return `<div class="card tw"><table><thead><tr><th>Name</th><th>ID</th><th>Email</th><th>Role</th></tr></thead><tbody>${users.map(u=>`<tr><td>${esc(u.name)}</td><td>${esc(u.id)}</td><td>${esc(u.email)}</td><td>${esc(u.role)}</td></tr>`).join("")}</tbody></table></div>`}
-=[["Prototype started",now()]];function log(m){logs.unshift([`${S.user?.name}: ${m}`,now()])}
+function log(m){logs.unshift([`${S.user?.name}: ${m}`,now()])}
 function activity(){return `<div class="card"><h3>Activity log</h3>${logs.map(l=>`<div style="padding:6px 0;border-bottom:1px solid var(--bd)">${esc(l[0])} <span class="mut">${l[1]}</span></div>`).join("")}</div>`}
 function nots(){const L=notifs.filter(n=>n.uid===S.user.id);notifs.forEach(n=>{if(n.uid===S.user.id)n.read=true});
 return `<div class="card"><h3>Notifications</h3>${L.map(n=>`<div style="padding:8px 0;border-bottom:1px solid var(--bd)">${esc(n.m)} <span class="mut">${n.t}</span></div>`).join("")||`<p class="mut">You’re all caught up.</p>`}</div>`}
-
-let anns=[{t:"Welcome to CivicSnap",b:"Report facility concerns with a photo and track every repair here.",d:"Nov 24, 2026"}];
 let cfg={school:"Ilaya Barangka Integrated School",email:true,multi:true};
 function annTab(){return `<div class="card" style="max-width:640px"><h3>New announcement</h3><label for="at">Title</label><input id="at"><label for="ab">Message</label><textarea id="ab" rows="3"></textarea><button class="btn s" style="margin-top:10px" onclick="addAnn()">Post announcement</button></div>${anns.map((a,i)=>`<div class="card" style="margin-top:12px"><b>${esc(a.t)}</b> <span class="mut">${a.d}</span><p>${esc(a.b)}</p><button class="btn sm g" onclick="anns.splice(${i},1);render()">Remove</button></div>`).join("")}`}
 function addAnn(){if(!v("at")||!v("ab"))return toast("Add a title and a message");anns.unshift({t:v("at"),b:v("ab"),d:new Date().toLocaleDateString("en-PH",{dateStyle:"medium"})});log("Posted announcement");toast("Announcement posted")}
