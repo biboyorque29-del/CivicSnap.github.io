@@ -211,4 +211,65 @@ function render(){const a=document.activeElement?.id;
 render();
 </script>
 </body>
+# CivicSnap (frontend + backend, combined)
+
+```
+civicsnap/
+├── backend/    Express + PostgreSQL + Socket.IO API
+├── frontend/   React + Vite + Tailwind website
+└── package.json  root scripts that run both together
+```
+
+## What changed when the two projects were combined
+- Added `GET /api/admin/stats` and `GET /api/admin/activity` to the backend
+  (`backend/src/routes/admin.js`). The admin dashboard already called them, but they did not exist.
+- The backend now serves the built frontend, so production is **one server, one URL**
+  (no CORS setup, no second host).
+- The frontend uses the same origin for the API in a production build, and `localhost:4000` in dev.
+- Helmet's `upgrade-insecure-requests` is turned off so the site works over plain `http://localhost`.
+
+## First-time setup
+1. Install PostgreSQL and create an empty database named `civicsnap`.
+2. `npm run install:all`
+3. `cp backend/.env.example backend/.env` and fill in:
+   `DATABASE_URL`, `JWT_SECRET`, `ADMIN_PASSWORD`, `ADMIN_VERIFICATION_CODE`
+   (generate the secret with `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"`).
+4. `npm run setup`   (creates tables, the single admin account and the default status legends)
+
+## Run it
+
+**Development** (hot reload, two ports):
+```
+npm run dev
+```
+Open http://localhost:5173. Keep `CLIENT_URL=http://localhost:5173` in `backend/.env`.
+
+**As one website** (what you deploy):
+```
+npm run build
+npm start
+```
+Open http://localhost:4000. Set `CLIENT_URL` in `backend/.env` to the public address of the site
+(it is used in password-reset links).
+
+## Logging in
+- Students, teachers and maintenance staff register on the site.
+- The administrator is the account created by `npm run setup`. After the password, the site asks for
+  the administrator verification code you put in `.env`.
+
+## What the site does now
+- **Students / teachers / maintenance:** submit concerns with up to 4 photos, track status and progress,
+  cancel a report while it is still Pending, see announcements, get live notifications (bell in the top bar).
+- **Maintenance:** sees concerns assigned to them, moves them to *In Progress* / *For Verification*, adds internal notes.
+- **Administrator:** analytics and charts, all concerns (search, filters, archive, soft-delete/restore, assign, change
+  status), Legend Manager (add / recolour / reorder / disable statuses), user management (activate, deactivate,
+  change role, unlock), announcements, reports (date range, CSV download, print to PDF), searchable activity log,
+  system settings (categories, open/close registration, change admin password and verification code).
+
+## Notes
+- Photos are resized in the browser and stored on the server in `backend/uploads/` (no Cloudinary needed).
+  Back this folder up with the database, and mount it as a persistent disk if you host on a platform with an ephemeral filesystem.
+- Built-in statuses (Pending, Under Review, In Progress, For Verification, Resolved, Rejected) cannot be renamed or deleted.
+- No new npm packages were added; `npm run install:all` is enough.
+
 </html>
