@@ -87,35 +87,28 @@ const stOf=n=>statuses.find(s=>s.n===n)||{c:"#64748B"};
 const badge=n=>`<span class="badge" style="background:${stOf(n).c}">${esc(n)}</span>`;
 const nameOf=id=>users.find(u=>u.id===id)?.name||"—";
 const visible=r=>isAdm()||(isMt()?r.as===S.user.id:r.uid===S.user.id);
-const notify=(uid,m)=>...
- function notifyAdmins(message){
- users
-   .filter(u=>u.role==="Administrator")
-   .forEach(u=>{
-     notifs.unshift({
-       uid:u.id,
-       m:message,
-       t:now(),
-       read:false
-     });
-   });
+const notify=(uid,m)=>{
+  notifs.unshift({
+    uid,
+    m,
+    t:now(),
+    read:false
+  });
+};
 }
 const toast=m=>{S.toast=m;render();setTimeout(()=>{S.toast="";render()},2200)};
 function go(v){S.view=v;S.err="";if(v==="app"){S.tab=isAdm()?"Overview":isMt()?"Assigned":"My reports"}render();scrollTo(0,0)}
 function theme(){const r=document.documentElement;const d=r.dataset.theme==="dark"||(!r.dataset.theme&&matchMedia("(prefers-color-scheme:dark)").matches);r.dataset.theme=d?"light":"dark"}
 function logout(){S.user=null;S.pending=null;go("home")}
-
 function nav(){return `<header class="nav"><div class="logo" onclick="go('home')"><i></i>CivicSnap</div><span class="mut">${esc(cfg.school)}</span><span class="sp"></span>
 <button class="btn g sm" onclick="theme()" aria-label="Toggle dark mode">Dark mode</button>
 ${S.user?`<span class="mut">${esc(S.user.name)} (${esc(S.user.role)})</span><button class="btn g sm" onclick="go('app')">Dashboard</button><button class="btn sm" onclick="logout()">Log out</button>`:`<button class="btn sm" onclick="S.mode='login';go('auth')">Log in</button>`}</header>`}
-
 function home(){const ben=[["Faster reporting","Submit concerns instantly using any device."],["Transparency","Monitor concern status from submission to resolution."],["Better communication","Connect students, teachers, maintenance personnel, and school administrators."],["Improved school environment","Promote safety, cleanliness, and effective facility maintenance."]];
 return `<section class="hero"><div><div class="tag">Snap. Report. Improve.</div><h1>CivicSnap</h1><p style="max-width:52ch">CivicSnap is a digital reporting platform that empowers students, teachers, and school personnel to efficiently report, monitor, and track school facility concerns. Through better communication, transparency, and accountability, CivicSnap helps create a safer and more conducive learning environment.</p>
 <div class="row"><button class="btn" onclick="S.user?(S.tab='New concern',go('app')):(S.mode='login',go('auth'))">Report a concern</button><button class="btn g" onclick="document.getElementById('about').scrollIntoView({behavior:'smooth'})">Learn more</button></div></div>
 <div class="card"><b style="font-family:Poppins">Live status board</b>${statuses.filter(s=>s.on).map(s=>`<div style="display:flex;justify-content:space-between;margin-top:10px">${badge(s.n)}<b>${reps.filter(r=>r.st===s.n).length}</b></div>`).join("")}<p class="mut">Try the demo: student@ibis.edu / student123, teacher@ibis.edu / teacher123, or maint@ibis.edu / maint123.</p></div></section>
 <section class="wrap" id="about"><h2>Why CivicSnap</h2><p style="max-width:70ch">Traditional reporting methods often rely on verbal communication, paper notes, or informal reporting processes, resulting in delayed responses and unresolved concerns. CivicSnap transforms this process into a centralized digital reporting system that allows users to submit concerns, upload photographic evidence, and track updates until resolution.</p>
 <div class="grid">${ben.map(b=>`<div class="card"><h3>${b[0]}</h3><span class="mut">${b[1]}</span></div>`).join("")}</div></section>`}
-
 function auth(){
 if(S.granted)return `<div class="card auth" role="status"><h2>Access Granted</h2><p>Redirecting to Administrator Dashboard...</p></div>`;
 if(S.pending)return `<div class="card auth"><h2>Administrator verification</h2><p class="mut">Step 2 of 2. Enter the Administrator Verification Code.</p><label for="ak">Administrator Verification Code</label><input id="ak" type="password" autocomplete="off"><button class="btn" style="margin-top:12px" onclick="adminKey()">Verify and continue</button>${S.err?`<div class="err">${S.err}</div>`:""}</div>`;
@@ -141,23 +134,17 @@ function register(){const pw=document.getElementById("pw").value,pc=document.get
  else{const u={name:v("rn"),id:v("ri"),email:v("em"),pw,role:v("rr")||"Student"};users.push(u);S.user=u;return go("app")}
  render()}
 function forgot(){S.err="Password reset isn’t available in this prototype. In production, a reset link is emailed to the registered address.";render()}
-
 function app(){const tabs=isAdm()?["Overview","All concerns","Legends","Users","Announcements","Reports","Activity","Settings"]:isMt()?["Assigned","Notifications"]:["My reports","New concern","Notifications"];
 const un=notifs.filter(n=>n.uid===S.user.id&&!n.read).length;
 let b="";
 if(S.tab==="Overview")b=overview();else if(S.tab==="All concerns"||S.tab==="Assigned"||S.tab==="My reports")b=`<div class="card">${filters()}<div class="tw" id="tbl">${table()}</div></div>`;
 else if(S.tab==="New concern")b=form();else if(S.tab==="Legends")b=legends();else if(S.tab==="Users")b=usersTab();else if(S.tab==="Announcements")b=annTab();else if(S.tab==="Reports")b=repTab();else if(S.tab==="Settings")b=setTab();else if(S.tab==="Notifications")b=nots();else b=activity();
 return `<div class="wrap">${!isAdm()&&anns[0]?`<div class="note"><b>${esc(anns[0].t)}</b> ${esc(anns[0].b)}</div>`:""}<div class="tabs">${tabs.map(t=>`<button class="${S.tab===t?"on":""}" onclick="S.tab='${t}';render()">${t}${t==="Notifications"&&un?` (${un})`:""}</button>`).join("")}</div>${b}</div>`}
-
 function overview(){
-
 if(reps.length===0){
-
  return `
  <div class="card">
-
    <h2>Welcome to CivicSnap</h2>
-
    <p>
    There are currently no submitted concerns.
    Reports will appear once users begin
@@ -191,7 +178,6 @@ if(reps.length===0){
  </div>
  `;
 }
-
 const R=reps,
 tot=R.length,
 res=R.filter(r=>r.st==="Resolved").length;
@@ -202,7 +188,6 @@ return `<div class="grid">${k.map(([l,n])=>`<div class="card kpi"><span class="m
 <div class="card"><h3>Status distribution</h3>${bars(statuses.map(s=>[s.n,R.filter(r=>r.st===s.n).length,s.c]),"#2563EB")}</div>
 <div class="card"><h3>Monthly trend</h3>${bars(Object.entries(mon).map(([m,c])=>[m,c]),"#10B981")}</div></div>
 <div class="card" style="margin-top:14px"><h3>Location heat map</h3><div class="heat">${Object.entries(locs).map(([l,c])=>`<div style="background:rgba(245,158,11,${.2+.8*c/mx})">${esc(l)}<br><b>${c}</b></div>`).join("")}</div></div>`}
-
 function filters(){const f=S.f;const sel=(id,l,o)=>`<select id="${id}" aria-label="${l}" onchange="fl()" style="width:auto"><option value="">${l}</option>${o.map(x=>`<option ${f[id]===x?"selected":""}>${esc(x)}</option>`).join("")}</select>`;
 return `<div class="row" style="margin-bottom:12px"><input id="q" placeholder="Search reports" value="${esc(f.q)}" oninput="fl()" style="max-width:260px">${sel("st","All statuses",statuses.map(s=>s.n))}${sel("cat","All categories",CATS)}${sel("pr","All priorities",PRI)}${sel("loc","All locations",[...new Set(reps.filter(visible).map(r=>r.loc))])}${isAdm()?sel("rep","All reporters",[...new Set(reps.map(r=>nameOf(r.uid)))]):""}<input id="from" type="date" value="${f.from||""}" onchange="fl()" aria-label="From date" style="width:auto">${sel("sort","Newest first",["Oldest first","Priority","Status"])}</div>`}
 function fl(){["q","st","cat","pr","loc","rep","from","sort"].forEach(k=>S.f[k]=document.getElementById(k)?.value||"");document.getElementById("tbl").innerHTML=table()}
@@ -211,7 +196,6 @@ const L=reps.filter(visible).filter(r=>(!q||(r.title+r.rid+r.loc).toLowerCase().
 if(!L.length)return `<p class="mut">No reports match. ${isAdm()||isMt()?"":"Use New concern to submit your first report."}</p>`;
 return `<table><thead><tr><th>ID</th>${isAdm()?"<th>Reporter</th><th>Role</th>":""}<th>Concern</th><th>Category</th><th>Location</th><th>Date</th><th>Priority</th><th>Status</th><th></th></tr></thead><tbody>${L.map(r=>`<tr><td>${r.rid}</td>${isAdm()?`<td>${esc(nameOf(r.uid))}</td><td>${esc(users.find(u=>u.id===r.uid)?.role)}</td>`:""}<td>${esc(r.title)}</td><td>${esc(r.cat)}</td><td>${esc(r.loc)}</td><td>${r.date}</td><td>${r.pr}</td><td>${badge(r.st)}</td><td><button class="btn sm" onclick="S.open='${r.rid}';render()">View</button>${isAdm()?` <button class="btn sm s" onclick="quickRes('${r.rid}')">Resolve</button> <button class="btn sm g" onclick="del('${r.rid}')">Delete</button>`:""}</td></tr>`).join("")}</tbody></table>`}
 function del(id){if(confirm("Delete "+id+"? This is recorded in the activity log.")){reps=reps.filter(r=>r.rid!==id);log("Deleted "+id);render()}}
-
 function form(){return `<div class="card" style="max-width:640px"><h2>Report a concern</h2>
 <label for="t">Concern title</label><input id="t"><label for="c">Category</label><select id="c">${CATS.map(c=>`<option>${c}</option>`).join("")}</select>
 <label for="d">Details</label><textarea id="d" rows="4"></textarea><label for="l">Location</label><input id="l" placeholder="e.g. Room 12, Building B">
@@ -220,14 +204,12 @@ function form(){return `<div class="card" style="max-width:640px"><h2>Report a c
 <button class="btn s" style="margin-top:14px" onclick="submit()">Submit concern</button>${S.err?`<div class="err">${S.err}</div>`:""}</div>`}
 function prev(i){S.draft=[...i.files].map(f=>URL.createObjectURL(f));document.getElementById("pv").innerHTML=S.draft.map(u=>`<img src="${u}" alt="Preview">`).join("")}
 function submit(){
-
  if(!v("t")||!v("d")||!v("l")){
    S.err="Add a title, details, and a location.";
    return render();
  }
-
  const rid="CS-2027-"+String(reps.length+1).padStart(4,"0");
-
+ 
  const d=new Date().toLocaleDateString(
    "en-PH",
    {dateStyle:"medium"}
